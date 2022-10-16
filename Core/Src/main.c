@@ -24,12 +24,15 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "queue.h"
+#include "buzzer.h"
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef void (buzzer_cb)(struct fifo_queue*, enum request_type);
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -38,13 +41,45 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+#define POLLING_RECEIVE_TIMEOUT_PER_CHAR (10)
 
+#define RQT_THRESHOLD (11)
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+static buzzer_cb* buzzer_callbacks[] = {
+		[RQT_DO]             = play_note,
+		[RQT_RE]             = play_note,
+		[RQT_MI]             = play_note,
+		[RQT_FA]             = play_note,
+		[RQT_SOL]            = play_note,
+		[RQT_LA]             = play_note,
+		[RQT_TI]             = play_note,
+		[RQT_RAISE_OCTAVE]   = raise_octave,
+		[RQT_LOWER_OCTAVE]   = lower_octave,
+		[RQT_RAISE_DURATION] = raise_duration,
+		[RQT_LOWER_DURATION] = lower_duration
+};
 
+static enum request_type rqt_map[] = {
+		['1'] = RQT_DO,
+		['2'] = RQT_RE,
+		['3'] = RQT_MI,
+		['4'] = RQT_FA,
+		['5'] = RQT_SOL,
+		['6'] = RQT_LA,
+		['7'] = RQT_TI,
+		['A'] = RQT_RAISE_OCTAVE,
+		['a'] = RQT_LOWER_OCTAVE,
+		['+'] = RQT_RAISE_DURATION,
+		['-'] = RQT_LOWER_DURATION
+};
+
+static struct fifo_queue requests_queue;
+
+static struct fifo_queue to_user_queue;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -88,17 +123,50 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM1_Init();
   MX_USART6_UART_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIM_Base_Start_IT(&htim6);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+  char symbol = 0;
+  HAL_StatusTypeDef rx_status = HAL_OK;
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  // receive command
+	  rx_status = HAL_UART_Receive(&huart6, (uint8_t*) &symbol, 1, POLLING_RECEIVE_TIMEOUT_PER_CHAR);
+	  if (rx_status == HAL_OK) {
+
+		  if ((symbol >= '1' && symbol <= '7')
+				  || (symbol == '+') || (symbol == '-')
+				  || (symbol == 'A') || (symbol == 'a')
+				  || (symbol == '\r')) {
+
+			  if (symbol == '\r') {
+				  for (uint8_t t_n = RQT_DO; t_n <= RQT_TI; ++t_n)
+					  queue_write(&requests_queue, &t_n, 1);
+
+			  } else queue_write(&requests_queue, &rqt_map[(size_t) symbol], 1);
+		  } else {
+			  uint8_t invalid_request = symbol + RQT_THRESHOLD;
+			  queue_write(&requests_queue, &invalid_request, 1);
+		  }
+	  }
+
+	  // transmit result
+	  if (!queue_is_empty(&to_user_queue)) {
+		  char response[256];
+		  const size_t length = queue_read(&to_user_queue, (uint8_t*) response, sizeof(response));
+		  HAL_UART_Transmit(&huart6, (uint8_t*) response, length, length * POLLING_RECEIVE_TIMEOUT_PER_CHAR);
+	  }
+
   }
   /* USER CODE END 3 */
 }
@@ -156,7 +224,22 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
+	if(htim->Instance == TIM6) {
+		if (queue_is_empty(&requests_queue)) return;
+
+		uint8_t request = 0;
+		queue_read(&requests_queue, &request, 1);
+		if (request >= RQT_THRESHOLD) {
+			char response[1024];
+			snprintf(response, sizeof(response), "неверный символ %hhu\r\n", request - RQT_THRESHOLD);
+			const size_t length = strlen(response);
+			queue_write(&to_user_queue, (uint8_t*) response, length);
+		} else buzzer_callbacks[request](&to_user_queue, request);
+	} else if (htim->Instance == TIM1) mute_buzzer();
+
+}
 /* USER CODE END 4 */
 
 /**
