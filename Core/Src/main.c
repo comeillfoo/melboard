@@ -227,6 +227,12 @@ void SystemClock_Config(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if(htim->Instance == TIM6) {
+		if (!is_buzzer_done()) {
+			pass_time(1);
+			return;
+		}
+		mute_buzzer();
+
 		if (queue_is_empty(&requests_queue)) return;
 
 		uint8_t request = 0;
@@ -237,7 +243,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 			const size_t length = strlen(response);
 			queue_write(&to_user_queue, (uint8_t*) response, length);
 		} else buzzer_callbacks[request](&to_user_queue, request);
-	} else if (htim->Instance == TIM1) mute_buzzer();
+	}
 
 }
 /* USER CODE END 4 */

@@ -14,6 +14,8 @@
 struct buzzer {
 	uint32_t duration;
 	size_t octave;
+	int done;
+	uint32_t passed_time;
 };
 
 
@@ -30,5 +32,9 @@ void play_note(struct fifo_queue*, enum request_type);
 void mute_buzzer();
 
 void unmute_buzzer();
+
+int is_buzzer_done();
+
+void pass_time(uint32_t);
 
 #endif /* INC_BUZZER_H_ */

@@ -13,7 +13,7 @@
 #define DEFAULT_OCTAVE (5)
 #define DEFAULT_DURATION (10) // in deciseconds; 1 decisecond == 0.1 second
 
-static struct buzzer buzz = { DEFAULT_DURATION, DEFAULT_OCTAVE };
+static struct buzzer buzz = { DEFAULT_DURATION, DEFAULT_OCTAVE, 1 };
 
 enum note_frequency { // in milliherz for first octave (5)
 	NF_DO  = 261630,
@@ -71,14 +71,14 @@ void mute_buzzer() { TIM1->CCR1 = 0; }
 void unmute_buzzer() { TIM1->CCR1 = TIM1->ARR >> 1; }
 
 
-static void set_freq_and_duration(uint32_t millifreq, uint32_t deciseconds) {
-	TIM1->PSC = ((2 * HAL_RCC_GetPCLK1Freq() * 100) / millifreq) * 10 - 1;
+static void set_frequency(uint32_t millifreq) {
+	TIM1->PSC = ((2 * HAL_RCC_GetPCLK2Freq() * 100) / (2 * millifreq * 10)) * 10 - 1;
 
-	const uint32_t one_tick_duration = 1000000000 / millifreq; // in megaseconds
-	uint32_t tick_duration = (100000 * deciseconds) / one_tick_duration - 1;
+//	const uint32_t one_tick_duration = 1000000000 / millifreq; // in megaseconds
+//	uint32_t tick_duration = (100000 * deciseconds) / one_tick_duration - 1;
 
-	if (tick_duration == 0) tick_duration = 1;
-	TIM1->ARR = tick_duration;
+//	if (tick_duration == 0) tick_duration = 1;
+//	TIM1->ARR = tick_duration;
 }
 
 
@@ -94,16 +94,26 @@ static char notes[] = {
 
 void play_note(struct fifo_queue* response_q, enum request_type req) {
 	const uint32_t millifreq_of_octave = millifreq_map[req] >> (DEFAULT_OCTAVE - buzz.octave);
-	set_freq_and_duration(millifreq_of_octave, buzz.duration);
+	set_frequency(millifreq_of_octave);
 	unmute_buzzer();
+	buzz.done = 0;
 
 	// send response
 	char response[DEFAULT_RESPONSE_LENGTH];
-	snprintf(response, DEFAULT_RESPONSE_LENGTH, "%c%zu %lu\r\n", notes[req], buzz.octave, buzz.duration);
+	snprintf(response, DEFAULT_RESPONSE_LENGTH, "%c%u %lu\r\n", notes[req], buzz.octave, buzz.duration);
 	const size_t length = strlen(response);
 	queue_write(response_q, (uint8_t*) response, length);
 }
 
+int is_buzzer_done() { return buzz.done; }
+
+void pass_time(uint32_t milliseconds_passed) {
+	buzz.passed_time += milliseconds_passed;
+	if (buzz.passed_time >= buzz.duration * 100) {
+		buzz.done = 1;
+		buzz.passed_time = 0;
+	}
+}
 
 #undef DEFAULT_RESPONSE_LENGTH
 
