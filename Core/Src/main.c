@@ -227,19 +227,25 @@ void SystemClock_Config(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if(htim->Instance == TIM6) {
-		if (!is_buzzer_done()) {
+
+		// pass time to buzzer until its done
+		if (!is_buzzer_done())
 			pass_time(1);
-			return;
-		}
-		mute_buzzer();
+		else mute_buzzer();
 
 		if (queue_is_empty(&requests_queue)) return;
 
+		if (!is_buzzer_done()) {
+			const uint8_t top = queue_top(&requests_queue);
+			if (top >= RQT_DO && top <= RQT_TI) return;
+		}
+
+		// handle request
 		uint8_t request = 0;
 		queue_read(&requests_queue, &request, 1);
 		if (request >= RQT_THRESHOLD) {
 			char response[1024];
-			snprintf(response, sizeof(response), "неверный символ %hhu\r\n", request - RQT_THRESHOLD);
+			snprintf(response, sizeof(response), "неверный символ %u\r\n", request - RQT_THRESHOLD);
 			const size_t length = strlen(response);
 			queue_write(&to_user_queue, (uint8_t*) response, length);
 		} else buzzer_callbacks[request](&to_user_queue, request);

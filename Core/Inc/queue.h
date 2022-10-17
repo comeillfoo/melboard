@@ -24,6 +24,8 @@ void queue_write(struct fifo_queue*, uint8_t*, size_t);
 
 size_t queue_read(struct fifo_queue*, uint8_t*, size_t);
 
+uint8_t queue_top(struct fifo_queue* queue);
+
 int queue_is_empty(struct fifo_queue*);
 
 void queue_clear(struct fifo_queue*);
