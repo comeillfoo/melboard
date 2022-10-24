@@ -6,7 +6,7 @@
  */
 #include "queue.h"
 
-uint8_t queue_top(struct fifo_queue* queue) { return queue->data[queue->data_p - queue->counter]; }
+uint8_t queue_top(struct fifo_queue* queue) { return queue->data[queue->data_p - 1]; }
 
 
 size_t queue_read(struct fifo_queue* q, uint8_t* dest, size_t size) {

@@ -72,7 +72,7 @@ void unmute_buzzer() { TIM1->CCR1 = TIM1->ARR >> 1; }
 
 
 static void set_frequency(uint32_t millifreq) {
-	TIM1->PSC = ((2 * HAL_RCC_GetPCLK2Freq() * 100) / (2 * millifreq * 10)) * 10 - 1;
+	TIM1->PSC = ((HAL_RCC_GetPCLK2Freq() * 10) / millifreq) * 10 - 1;
 
 //	const uint32_t one_tick_duration = 1000000000 / millifreq; // in megaseconds
 //	uint32_t tick_duration = (100000 * deciseconds) / one_tick_duration - 1;
@@ -100,7 +100,7 @@ void play_note(struct fifo_queue* response_q, enum request_type req) {
 
 	// send response
 	char response[DEFAULT_RESPONSE_LENGTH];
-	snprintf(response, DEFAULT_RESPONSE_LENGTH, "%c%u %lu\r\n", notes[req], buzz.octave, buzz.duration);
+	snprintf(response, DEFAULT_RESPONSE_LENGTH, "%c%u %lu,%lu\r\n", notes[req], buzz.octave, buzz.duration / 10, buzz.duration % 10);
 	const size_t length = strlen(response);
 	queue_write(response_q, (uint8_t*) response, length);
 }
