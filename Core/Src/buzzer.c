@@ -16,13 +16,20 @@
 static struct buzzer buzz = { DEFAULT_DURATION, DEFAULT_OCTAVE, 1 };
 
 enum note_frequency { // in milliherz for first octave (5)
-	NF_DO  = 261630,
-	NF_RE  = 293670,
-	NF_MI  = 329630,
-	NF_FA  = 349230,
-	NF_SOL = 392000,
-	NF_LA  = 440000,
-	NF_TI  = 493880
+//	NF_DO  = 261630,
+//	NF_RE  = 293670,
+//	NF_MI  = 329630,
+//	NF_FA  = 349230,
+//	NF_SOL = 392000,
+//	NF_LA  = 440000,
+//	NF_TI  = 493880
+	NF_DO  = 16352,
+	NF_RE  = 18354,
+	NF_MI  = 20602,
+	NF_FA  = 21827,
+	NF_SOL = 24500,
+	NF_LA  = 27500,
+	NF_TI  = 30868
 };
 
 static enum note_frequency millifreq_map[] = {
@@ -72,7 +79,7 @@ void unmute_buzzer() { TIM1->CCR1 = TIM1->ARR >> 1; }
 
 
 static void set_frequency(uint32_t millifreq) {
-	TIM1->PSC = ((HAL_RCC_GetPCLK2Freq() * 10) / millifreq) * 10 - 1;
+	TIM1->PSC = ((2 * HAL_RCC_GetPCLK2Freq() * 10) / (2 * (TIM1->ARR) * millifreq)) * 10 - 1;
 
 //	const uint32_t one_tick_duration = 1000000000 / millifreq; // in megaseconds
 //	uint32_t tick_duration = (100000 * deciseconds) / one_tick_duration - 1;
@@ -93,7 +100,7 @@ static char notes[] = {
 };
 
 void play_note(struct fifo_queue* response_q, enum request_type req) {
-	const uint32_t millifreq_of_octave = millifreq_map[req] >> (DEFAULT_OCTAVE - buzz.octave);
+	const uint32_t millifreq_of_octave = millifreq_map[req] << (buzz.octave - 1);
 	set_frequency(millifreq_of_octave);
 	unmute_buzzer();
 	buzz.done = 0;
