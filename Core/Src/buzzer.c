@@ -79,13 +79,7 @@ void unmute_buzzer() { TIM1->CCR1 = TIM1->ARR >> 1; }
 
 
 static void set_frequency(uint32_t millifreq) {
-	TIM1->PSC = ((2 * HAL_RCC_GetPCLK2Freq() * 10) / (2 * (TIM1->ARR) * millifreq)) * 10 - 1;
-
-//	const uint32_t one_tick_duration = 1000000000 / millifreq; // in megaseconds
-//	uint32_t tick_duration = (100000 * deciseconds) / one_tick_duration - 1;
-
-//	if (tick_duration == 0) tick_duration = 1;
-//	TIM1->ARR = tick_duration;
+	TIM1->PSC = ((2 * HAL_RCC_GetPCLK2Freq() * 10) / (2 * (TIM1->ARR) * millifreq)) * 100 - 1;
 }
 
 
