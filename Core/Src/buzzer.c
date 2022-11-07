@@ -77,7 +77,35 @@ static uint32_t herz_map[] = {
 	N_F4,
 	N_G4,
 	N_A4,
-	N_B4
+	N_B4,
+	N_C5,
+	N_D5,
+	N_E5,
+	N_F5,
+	N_G5,
+	N_A5,
+	N_B5,
+	N_C6,
+	N_D6,
+	N_E6,
+	N_F6,
+	N_G6,
+	N_A6,
+	N_B6,
+	N_C7,
+	N_D7,
+	N_E7,
+	N_F7,
+	N_G7,
+	N_A7,
+	N_B7,
+	N_C8,
+	N_D8,
+	N_E8,
+	N_F8,
+	N_G8,
+	N_A8,
+	N_B8
 };
 
 
@@ -91,7 +119,7 @@ static void response_number(struct fifo_queue* response_q, uint32_t number) {
 }
 
 void raise_octave(struct fifo_queue* response_q, enum request_type req) {
-	if (buzz.octave < 5) buzz.octave += 1;
+	if (buzz.octave < 9) buzz.octave += 1;
 	response_number(response_q, buzz.octave);
 }
 
