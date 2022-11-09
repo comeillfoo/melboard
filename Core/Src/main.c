@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include "queue.h"
 #include "buzzer.h"
+#include "mb.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE END Includes */
@@ -65,17 +66,17 @@ static buzzer_cb* buzzer_callbacks[] = {
 };
 
 static enum request_type rqt_map[] = {
-		['1'] = RQT_DO,
-		['2'] = RQT_RE,
-		['3'] = RQT_MI,
-		['4'] = RQT_FA,
-		['5'] = RQT_SOL,
-		['6'] = RQT_LA,
-		['7'] = RQT_TI,
-		['A'] = RQT_RAISE_OCTAVE,
-		['a'] = RQT_LOWER_OCTAVE,
-		['+'] = RQT_RAISE_DURATION,
-		['-'] = RQT_LOWER_DURATION
+		[KB_BTN_1] = RQT_DO,
+		[KB_BTN_2] = RQT_RE,
+		[KB_BTN_3] = RQT_MI,
+		[KB_BTN_4] = RQT_FA,
+		[KB_BTN_5] = RQT_SOL,
+		[KB_BTN_6] = RQT_LA,
+		[KB_BTN_7] = RQT_TI,
+		[KB_BTN_A] = RQT_RAISE_OCTAVE,
+		[KB_BTN_a] = RQT_LOWER_OCTAVE,
+		[KB_BTN_P] = RQT_RAISE_DURATION,
+		[KB_BTN_M] = RQT_LOWER_DURATION
 };
 
 static struct fifo_queue requests_queue;
@@ -134,8 +135,8 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  char symbol = 0;
-  HAL_StatusTypeDef rx_status = HAL_OK;
+//  char symbol = 0;
+//  HAL_StatusTypeDef rx_status = HAL_OK;
 
   while (1)
   {
@@ -143,21 +144,25 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  // receive command
-	  rx_status = HAL_UART_Receive(&huart6, (uint8_t*) &symbol, 1, POLLING_RECEIVE_TIMEOUT_PER_CHAR);
-	  if (rx_status == HAL_OK) {
+	  const uint8_t pressed_btn = poll_btn();
+	  if (pressed_btn != KB_BTN_NONE) {
+	  // rx_status = HAL_UART_Receive(&huart6, (uint8_t*) &symbol, 1, POLLING_RECEIVE_TIMEOUT_PER_CHAR);
+	  // if (rx_status == HAL_OK) {
 
-		  if ((symbol >= '1' && symbol <= '7')
-				  || (symbol == '+') || (symbol == '-')
-				  || (symbol == 'A') || (symbol == 'a')
-				  || (symbol == '\r')) {
+		  if ((pressed_btn >= KB_BTN_1 && pressed_btn <= KB_BTN_7)
+				  || (pressed_btn == KB_BTN_P)
+				  || (pressed_btn == KB_BTN_M)
+				  || (pressed_btn == KB_BTN_A)
+				  || (pressed_btn == KB_BTN_a)
+				  || (pressed_btn == KB_BTN_ENTER)) {
 
-			  if (symbol == '\r') {
+			  if (pressed_btn == KB_BTN_ENTER) {
 				  for (uint8_t t_n = RQT_DO; t_n <= RQT_TI; ++t_n)
 					  queue_write(&requests_queue, &t_n, 1);
 
-			  } else queue_write(&requests_queue, &rqt_map[(size_t) symbol], 1);
+			  } else queue_write(&requests_queue, &rqt_map[(size_t) pressed_btn], 1);
 		  } else {
-			  uint8_t invalid_request = symbol + RQT_THRESHOLD;
+			  uint8_t invalid_request = pressed_btn + RQT_THRESHOLD;
 			  queue_write(&requests_queue, &invalid_request, 1);
 		  }
 	  }
