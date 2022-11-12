@@ -13,99 +13,18 @@
 #define DEFAULT_OCTAVE (5)
 #define DEFAULT_DURATION (10) // in deciseconds; 1 decisecond == 0.1 second
 
-static struct buzzer buzz = { DEFAULT_DURATION, DEFAULT_OCTAVE, 1 };
-
-//enum note_frequency { // in milliherz for first octave (5)
-////	NF_DO  = 261630,
-////	NF_RE  = 293670,
-////	NF_MI  = 329630,
-////	NF_FA  = 349230,
-////	NF_SOL = 392000,
-////	NF_LA  = 440000,
-////	NF_TI  = 493880
-//	NF_DO  = 16351,
-//	NF_RE  = 18354,
-//	NF_MI  = 20602,
-//	NF_FA  = 21827,
-//	NF_SOL = 24500,
-//	NF_LA  = 27500,
-//	NF_TI  = 30868
-//};
-
-//static enum note_frequency millifreq_map[] = {
-//		[RQT_DO]  = NF_DO,
-//		[RQT_RE]  = NF_RE,
-//		[RQT_MI]  = NF_MI,
-//		[RQT_FA]  = NF_FA,
-//		[RQT_SOL] = NF_SOL,
-//		[RQT_LA]  = NF_LA,
-//		[RQT_TI]  = NF_TI
-//};
+static struct buzzer buzz = { DEFAULT_DURATION, DEFAULT_OCTAVE };
 
 static uint32_t herz_map[] = {
-	N_C0,
-	N_D0,
-	N_E0,
-	N_F0,
-	N_G0,
-	N_A0,
-	N_B0,
-	N_C1,
-	N_D1,
-	N_E1,
-	N_F1,
-	N_G1,
-	N_A1,
-	N_B1,
-	N_C2,
-	N_D2,
-	N_E2,
-	N_F2,
-	N_G2,
-	N_A2,
-	N_B2,
-	N_C3,
-	N_D3,
-	N_E3,
-	N_F3,
-	N_G3,
-	N_A3,
-	N_B3,
-	N_C4,
-	N_D4,
-	N_E4,
-	N_F4,
-	N_G4,
-	N_A4,
-	N_B4,
-	N_C5,
-	N_D5,
-	N_E5,
-	N_F5,
-	N_G5,
-	N_A5,
-	N_B5,
-	N_C6,
-	N_D6,
-	N_E6,
-	N_F6,
-	N_G6,
-	N_A6,
-	N_B6,
-	N_C7,
-	N_D7,
-	N_E7,
-	N_F7,
-	N_G7,
-	N_A7,
-	N_B7,
-	N_C8,
-	N_D8,
-	N_E8,
-	N_F8,
-	N_G8,
-	N_A8,
-	N_B8
+	N_C0, N_D0, N_E0, N_F0, N_G0, N_A0, N_B0,
+	N_C1, N_D1, N_E1, N_F1, N_G1, N_A1, N_B1,
+	N_C2, N_D2, N_E2, N_F2, N_G2, N_A2, N_B2,
+	N_C3, N_D3, N_E3, N_F3, N_G3, N_A3, N_B3,
+	N_C4, N_D4, N_E4, N_F4, N_G4, N_A4, N_B4,
+	N_C5, N_D5, N_E5, N_F5, N_G5, N_A5, N_B5,
+	N_C6, N_D6, N_E6, N_F6, N_G6, N_A6, N_B6,
+	N_C7, N_D7, N_E7, N_F7, N_G7, N_A7, N_B7,
+	N_C8, N_D8, N_E8, N_F8, N_G8, N_A8, N_B8
 };
 
 
@@ -163,7 +82,6 @@ void play_note(struct fifo_queue* response_q, enum request_type req) {
 	const uint32_t freq_of_octave = herz_map[req + 7 * (buzz.octave - 1)];
 	set_frequency(freq_of_octave);
 	unmute_buzzer();
-	buzz.done = 0;
 
 	// send response
 	char response[DEFAULT_RESPONSE_LENGTH];
@@ -172,14 +90,12 @@ void play_note(struct fifo_queue* response_q, enum request_type req) {
 	queue_write(response_q, (uint8_t*) response, length);
 }
 
-int is_buzzer_done() { return buzz.done; }
+uint32_t duration() {
+	return buzz.duration * 100; // to get milliseconds
+}
 
-void pass_time(uint32_t milliseconds_passed) {
-	buzz.passed_time += milliseconds_passed;
-	if (buzz.passed_time >= buzz.duration * 100) {
-		buzz.done = 1;
-		buzz.passed_time = 0;
-	}
+int is_muted() {
+	return TIM1->CCR1 == 0;
 }
 
 #undef DEFAULT_RESPONSE_LENGTH

@@ -14,8 +14,6 @@
 struct buzzer {
 	uint32_t duration;
 	size_t octave;
-	int done;
-	uint32_t passed_time;
 };
 
 
@@ -97,8 +95,8 @@ void mute_buzzer();
 
 void unmute_buzzer();
 
-int is_buzzer_done();
+uint32_t duration();
 
-void pass_time(uint32_t);
+int is_muted();
 
 #endif /* INC_BUZZER_H_ */
