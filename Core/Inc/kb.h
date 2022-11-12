@@ -17,7 +17,7 @@
 #define ROW4 0xF7
 
 
-HAL_StatusTypeDef check_row(uint8_t row_nr, uint8_t* keys_p);
+uint8_t check_row(uint8_t row_nr);
 HAL_StatusTypeDef set_keyboard(void);
 
 #endif /* INC_KB_H_ */

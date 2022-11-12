@@ -23,36 +23,74 @@ HAL_StatusTypeDef set_keyboard(void) {
 }
 
 
-HAL_StatusTypeDef check_row(uint8_t row_nr, uint8_t* keys_p) {
-	*keys_p = 0x00; // set to no pressed
-	HAL_StatusTypeDef ret = HAL_OK;
+uint8_t check_row(uint8_t row_nr) {
+	uint8_t Nkey = 0x00; // set to no pressed
 	uint8_t buf = 0;
 
-	ret = set_keyboard();
-	if(ret != HAL_OK) return ret;
+	set_keyboard();
+//	if(ret != HAL_OK) return ret;
 
 	buf = row_nr;
-	ret = PCA9538_Write_Register(KBRD_ADDR, CONFIG, &buf);
-	if(ret != HAL_OK) return ret;
+	PCA9538_Write_Register(KBRD_ADDR, CONFIG, &buf);
+//	if(ret != HAL_OK) return ret;
 
-	ret = PCA9538_Read_Inputs(KBRD_ADDR, &buf);
-	if(ret != HAL_OK) return ret;
+	PCA9538_Read_Inputs(KBRD_ADDR, &buf);
+//	if(ret != HAL_OK) return ret;
 
-	uint8_t kbd_in = buf & 0x70; // 0b01110000 the upper nibble is responsible for row
+	uint8_t kbd_in = buf & 0x70;
+	Nkey = kbd_in;
+	if( kbd_in != 0x70) {
+		if( !(kbd_in & 0x10) ) {
+			switch (row_nr) {
+				case ROW1:
+					Nkey = 0x04;
+					break;
+				case ROW2:
+					Nkey = 0x04;
+					break;
+				case ROW3:
+					Nkey = 0x04;
+					break;
+				case ROW4:
+					Nkey = 0x04;
+					break;
+			}
+		}
+		if( !(kbd_in & 0x20) ) {
+			switch (row_nr) {
+				case ROW1:
+					Nkey = 0x02;
+					break;
+				case ROW2:
+					Nkey = 0x02;
+					break;
+				case ROW3:
+					Nkey = 0x02;
+					break;
+				case ROW4:
+					Nkey = 0x02;
+					break;
+			}
+		}
+		if( !(kbd_in & 0x40) ) {
+			switch (row_nr) {
+				case ROW1:
+					Nkey = 0x01;
+					break;
+				case ROW2:
+					Nkey = 0x01;
+					break;
+				case ROW3:
+					Nkey = 0x01;
+					break;
+				case ROW4:
+					Nkey = 0x01;
+					break;
+			}
+		}
+	}
+	else Nkey = 0x00;
 
-	*keys_p = kbd_in;
-	if(kbd_in != 0x70) { // test if no one is pressed
-		if(!(kbd_in & 0x10)) // test if left button pressed
-			*keys_p = 0x04;
-
-		if(!(kbd_in & 0x20)) // test if middle button pressed
-			*keys_p = 0x02;
-
-		if(!(kbd_in & 0x40)) // test if right button pressed
-			*keys_p = 0x01;
-
-	} else *keys_p = 0x00;
-
-	return ret;
+	return Nkey;
 }
 

@@ -145,6 +145,10 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  // receive command
 	  const uint8_t pressed_btn = poll_btn();
+//	  char pressed_string[256];
+//	  snprintf(pressed_string, 256, "pressed %d\r\n", pressed_btn);
+//	  HAL_UART_Transmit(&huart6, (uint8_t*) pressed_string, strlen(pressed_string), strlen(pressed_string) * POLLING_RECEIVE_TIMEOUT_PER_CHAR);
+
 	  if (pressed_btn != KB_BTN_NONE) {
 	  // rx_status = HAL_UART_Receive(&huart6, (uint8_t*) &symbol, 1, POLLING_RECEIVE_TIMEOUT_PER_CHAR);
 	  // if (rx_status == HAL_OK) {
