@@ -65,7 +65,7 @@ static buzzer_cb* buzzer_callbacks[] = {
 		[RQT_LOWER_DURATION] = lower_duration
 };
 
-static enum request_type rqt_map[] = {
+static enum request_type map_char2rqt[] = {
 		['1'] = RQT_DO,
 		['2'] = RQT_RE,
 		['3'] = RQT_MI,
@@ -77,6 +77,20 @@ static enum request_type rqt_map[] = {
 		['a'] = RQT_LOWER_OCTAVE,
 		['+'] = RQT_RAISE_DURATION,
 		['-'] = RQT_LOWER_DURATION
+};
+
+static enum request_type map_btn2rqt[] = {
+		[KB_BTN_1] = RQT_DO,
+		[KB_BTN_2] = RQT_RE,
+		[KB_BTN_3] = RQT_MI,
+		[KB_BTN_4] = RQT_FA,
+		[KB_BTN_5] = RQT_SOL,
+		[KB_BTN_6] = RQT_LA,
+		[KB_BTN_7] = RQT_TI,
+		[KB_BTN_A] = RQT_RAISE_OCTAVE,
+		[KB_BTN_a] = RQT_LOWER_OCTAVE,
+		[KB_BTN_P] = RQT_RAISE_DURATION,
+		[KB_BTN_M] = RQT_LOWER_DURATION
 };
 
 static struct fifo_queue requests_queue;
@@ -161,7 +175,7 @@ int main(void)
 			  case '-':
 			  case 'A':
 			  case 'a':
-				  queue_write(&requests_queue, &rqt_map[(size_t) keycode], 1);
+				  queue_write(&requests_queue, &map_char2rqt[(size_t) keycode], 1);
 				  break;
 			  case '\r':
 				  for (uint8_t t_n = RQT_DO; t_n <= RQT_TI; ++t_n)
@@ -269,7 +283,7 @@ void SystemClock_Config(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if(htim->Instance == TIM6) {
-
+		update_counters();
 	}
 
 }

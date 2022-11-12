@@ -11,12 +11,13 @@
 #include <stdio.h>
 #include "usart.h"
 
-#define BTN_PRESSED_THRESHOLD  (30)
-#define BTN_RELEASED_THRESHOLD (30)
+#define BTN_PRESSED_THRESHOLD  (500)
+#define BTN_RELEASED_THRESHOLD (400)
 
-static int btn_counters[BUTTONS_NR] = {0};
-static bool btn_hold[BUTTONS_NR] = {false};
-static int map_row2btn[4][3] = {
+static int counters[BUTTONS_NR] = {0};
+static int kb_state = KB_BTN_NONE;
+
+static int map_buttons[4][3] = {
 		{KB_BTN_1, KB_BTN_2,     KB_BTN_3},
 		{KB_BTN_4, KB_BTN_5,     KB_BTN_6},
 		{KB_BTN_P, KB_BTN_7,     KB_BTN_M},
@@ -29,8 +30,10 @@ enum btn_side {
 	BTN_S_RIGHT
 };
 
+static enum btn_side map_row2side[3] = { BTN_S_LEFT, BTN_S_MIDDLE, BTN_S_RIGHT };
 
-static void update_counters() {
+
+void update_counters() {
 	// update counters
 	const uint8_t rows[4] = {ROW1, ROW2, ROW3, ROW4};
 
@@ -38,73 +41,41 @@ static void update_counters() {
 	for (size_t i = 0; i < 4; ++i) {
 		uint8_t row = check_row(rows[i]); // warning it takes 100ms
 
-		// detect pressed button candidate
-		uint8_t pressed_btn = 0;
-		switch (row) {
-			case 0x1:
-				pressed_btn = map_row2btn[i][BTN_S_RIGHT]; break;
-			case 0x2:
-				pressed_btn = map_row2btn[i][BTN_S_MIDDLE]; break;
-			case 0x4:
-				pressed_btn = map_row2btn[i][BTN_S_LEFT]; break;
-			default:
-				pressed_btn = KB_BTN_NONE; break;
-		}
-
-		// increment pressed
-		if (pressed_btn != KB_BTN_NONE) {
-			if (!btn_hold[pressed_btn])
-				btn_counters[pressed_btn]++;
-
-			// update for new cycle
-			if (btn_counters[pressed_btn] > BTN_PRESSED_THRESHOLD)
-				btn_hold[pressed_btn] = true;
-		}
-
-//		char resp[256];
-//		snprintf(resp, 256, "row[%d]: %x, l = %d, c = %d, r = %d\r\n", i, row, btn_counters[map_row2btn[i][BTN_S_LEFT]], btn_counters[map_row2btn[i][BTN_S_MIDDLE]], btn_counters[map_row2btn[i][BTN_S_RIGHT]]);
-//		HAL_UART_Transmit(&huart6, (uint8_t*) resp, strlen(resp), strlen(resp) * 10);
-
-		// decrement released
+		// update counters
 		for (size_t j = 0; j < 3; ++j) {
-			const uint8_t released_btn = map_row2btn[i][j];
-			if (pressed_btn != released_btn) {
-				if (btn_hold[released_btn])
-					btn_counters[released_btn]--;
-
-				// update for new cycle
-				if (btn_counters[released_btn] < BTN_RELEASED_THRESHOLD)
-					btn_hold[released_btn] = false;
-			}
+			uint8_t is_pressed = (row >> j) & 0x1;
+			if (is_pressed)
+				counters[map_buttons[i][map_row2side[j]]]++;
+			else counters[map_buttons[i][map_row2side[j]]]--;
 		}
 	}
 }
 
 
-uint8_t poll_btn() {
-
-	update_counters();
-
-	// detect only pressed number
-	uint16_t buttons_bitarray = 0;
-	for (size_t i = 1; i < BUTTONS_NR; ++i)
-		if (btn_counters[i] > BTN_PRESSED_THRESHOLD)
-			buttons_bitarray |= 1 << i;
-
-	// if power of two then single button pressed
-	if (buttons_bitarray == 0) return KB_BTN_NONE;
-
-	if ((buttons_bitarray & (buttons_bitarray - 1)) != 0)
-		return KB_BTN_NONE;
-
-	// get the number of button
-	uint8_t button_nr = 0;
-	while ((buttons_bitarray & 0x1) == 0) {
-		button_nr++;
-		buttons_bitarray = buttons_bitarray >> 1;
+uint8_t poll_keyboard() {
+	for (size_t i = KB_BTN_1; i <= KB_BTN_ENTER; ++i) {
+		switch (kb_state) {
+			case KB_BTN_NONE: if (counters[i] == BTN_PRESSED_THRESHOLD) kb_state = i; break;
+			case KB_BTN_1:
+			case KB_BTN_2:
+			case KB_BTN_3:
+			case KB_BTN_5:
+			case KB_BTN_6:
+			case KB_BTN_7:
+			case KB_BTN_A:
+			case KB_BTN_a:
+			case KB_BTN_P:
+			case KB_BTN_M:
+			case KB_BTN_ENTER:
+				if (((i != kb_state) && (counters[i] == BTN_PRESSED_THRESHOLD))
+					|| ((i == kb_state) && (counters[i] < BTN_RELEASED_THRESHOLD)))
+						kb_state = KB_BTN_NONE;
+				break;
+			default: break;
+		}
 	}
 
-	return button_nr;
+	return kb_state;
 }
 
 #undef BTN_PRESSED_THRESHOLD

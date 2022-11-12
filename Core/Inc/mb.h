@@ -29,6 +29,8 @@ enum kb_btn {
 
 #define BUTTONS_NR (13)
 
-uint8_t poll_btn();
+
+void update_counters();
+uint8_t poll_keyboard();
 
 #endif /* INC_MB_H_ */

@@ -24,7 +24,7 @@ HAL_StatusTypeDef set_keyboard(void) {
 
 
 uint8_t check_row(uint8_t row_nr) {
-	uint8_t Nkey = 0x00; // set to no pressed
+	uint8_t keys = 0x00; // set to no pressed
 	uint8_t buf = 0;
 
 	set_keyboard();
@@ -38,59 +38,18 @@ uint8_t check_row(uint8_t row_nr) {
 //	if(ret != HAL_OK) return ret;
 
 	uint8_t kbd_in = buf & 0x70;
-	Nkey = kbd_in;
-	if( kbd_in != 0x70) {
-		if( !(kbd_in & 0x10) ) {
-			switch (row_nr) {
-				case ROW1:
-					Nkey = 0x04;
-					break;
-				case ROW2:
-					Nkey = 0x04;
-					break;
-				case ROW3:
-					Nkey = 0x04;
-					break;
-				case ROW4:
-					Nkey = 0x04;
-					break;
-			}
-		}
-		if( !(kbd_in & 0x20) ) {
-			switch (row_nr) {
-				case ROW1:
-					Nkey = 0x02;
-					break;
-				case ROW2:
-					Nkey = 0x02;
-					break;
-				case ROW3:
-					Nkey = 0x02;
-					break;
-				case ROW4:
-					Nkey = 0x02;
-					break;
-			}
-		}
-		if( !(kbd_in & 0x40) ) {
-			switch (row_nr) {
-				case ROW1:
-					Nkey = 0x01;
-					break;
-				case ROW2:
-					Nkey = 0x01;
-					break;
-				case ROW3:
-					Nkey = 0x01;
-					break;
-				case ROW4:
-					Nkey = 0x01;
-					break;
-			}
-		}
-	}
-	else Nkey = 0x00;
+	keys = kbd_in;
+//	if( kbd_in != 0x70) {
+//		if( !(kbd_in & 0x10) ) keys = 0x04;
+//
+//		if( !(kbd_in & 0x20) ) keys = 0x02;
+//
+//		if( !(kbd_in & 0x40) ) keys = 0x01;
+//	}
+//	else keys = 0x00;
+	keys = keys >> 4;
+	keys = (~keys) & 0x7;
 
-	return Nkey;
+	return keys;
 }
 
