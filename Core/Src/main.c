@@ -19,22 +19,19 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "queue.h"
-#include "buzzer.h"
-#include "mb.h"
+#include "kb.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef void (buzzer_cb)(struct fifo_queue*, enum request_type);
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -43,59 +40,16 @@ typedef void (buzzer_cb)(struct fifo_queue*, enum request_type);
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define POLLING_RECEIVE_TIMEOUT_PER_CHAR (10)
 
-#define RQT_THRESHOLD (11)
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static buzzer_cb* buzzer_callbacks[] = {
-		[RQT_DO]             = play_note,
-		[RQT_RE]             = play_note,
-		[RQT_MI]             = play_note,
-		[RQT_FA]             = play_note,
-		[RQT_SOL]            = play_note,
-		[RQT_LA]             = play_note,
-		[RQT_TI]             = play_note,
-		[RQT_RAISE_OCTAVE]   = raise_octave,
-		[RQT_LOWER_OCTAVE]   = lower_octave,
-		[RQT_RAISE_DURATION] = raise_duration,
-		[RQT_LOWER_DURATION] = lower_duration
-};
-
-static enum request_type map_char2rqt[] = {
-		['1'] = RQT_DO,
-		['2'] = RQT_RE,
-		['3'] = RQT_MI,
-		['4'] = RQT_FA,
-		['5'] = RQT_SOL,
-		['6'] = RQT_LA,
-		['7'] = RQT_TI,
-		['A'] = RQT_RAISE_OCTAVE,
-		['a'] = RQT_LOWER_OCTAVE,
-		['+'] = RQT_RAISE_DURATION,
-		['-'] = RQT_LOWER_DURATION
-};
-
-static enum request_type map_btn2rqt[] = {
-		[KB_BTN_1] = RQT_DO,
-		[KB_BTN_2] = RQT_RE,
-		[KB_BTN_3] = RQT_MI,
-		[KB_BTN_4] = RQT_FA,
-		[KB_BTN_5] = RQT_SOL,
-		[KB_BTN_6] = RQT_LA,
-		[KB_BTN_7] = RQT_TI,
-		[KB_BTN_A] = RQT_RAISE_OCTAVE,
-		[KB_BTN_a] = RQT_LOWER_OCTAVE,
-		[KB_BTN_P] = RQT_RAISE_DURATION,
-		[KB_BTN_M] = RQT_LOWER_DURATION
-};
-
-static struct fifo_queue requests_queue;
-
-static struct fifo_queue to_user_queue;
+extern enum kb_fms kb_state;
+extern uint8_t row;
+extern uint8_t kb_buffer;
+extern int32_t cur_buttons_st[4][3];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -137,92 +91,34 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_TIM1_Init();
   MX_USART6_UART_Init();
-  MX_TIM6_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-  HAL_TIM_Base_Start_IT(&htim6);
+  KB_Init();
+  enum kb_event old_event = KBE_NONE, cur_event = KBE_NONE;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  char keycode = 0;
-  HAL_StatusTypeDef rx_status = HAL_OK;
-
-  uint32_t oldtimestamp = HAL_GetTick(); // start time
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  // 1. receive command
-	  rx_status = HAL_UART_Receive(&huart6, (uint8_t*) &keycode, 1, POLLING_RECEIVE_TIMEOUT_PER_CHAR);
+	KB_Poll_Start();
+	old_event = cur_event;
+	cur_event = KB_Poll_Finish();
 
-	  // write request to queue
-	  if (rx_status == HAL_OK) {
-		  switch (keycode) {
-		  	  case '1':
-		  	  case '2':
-		  	  case '3':
-		  	  case '4':
-		  	  case '5':
-			  case '6':
-			  case '7':
-			  case '+':
-			  case '-':
-			  case 'A':
-			  case 'a':
-				  queue_write(&requests_queue, &map_char2rqt[(size_t) keycode], 1);
-				  break;
-			  case '\r':
-				  for (uint8_t t_n = RQT_DO; t_n <= RQT_TI; ++t_n)
-					  queue_write(&requests_queue, &t_n, 1);
-				  break;
-			  default: {
-				  uint8_t invalid_request = keycode + RQT_THRESHOLD;
-				  queue_write(&requests_queue, &invalid_request, 1);
-				  break;
-			  }
-		  }
-	  }
+	// detect press
+	if ((cur_event != KBE_NONE) && (cur_event != old_event)) {
+		// TODO: add request to queue
+	}
 
-	  // 2. time promotion
-	  const uint32_t timespan = HAL_GetTick() - oldtimestamp;
-	  // if buzzer is working but time is up then mute buzzer and update previous timestamp
-	  if (!is_muted() && timespan >= duration()) {
-		  mute_buzzer();
-		  oldtimestamp = HAL_GetTick();
-	  }
-
-	  // 3. handle request
-	  if (!queue_is_empty(&requests_queue)) {
-
-		if (!is_muted()) {
-			const uint8_t top = queue_top(&requests_queue);
-			if (top >= RQT_DO && top <= RQT_TI) goto transmit;
-		}
-
-		uint8_t request = 0;
-		queue_read(&requests_queue, &request, 1);
-		if (request >= RQT_THRESHOLD) {
-			char response[1024];
-			snprintf(response, sizeof(response), "неверный символ %u\r\n", request - RQT_THRESHOLD);
-			const size_t length = strlen(response);
-			queue_write(&to_user_queue, (uint8_t*) response, length);
-		} else buzzer_callbacks[request](&to_user_queue, request);
-	  }
-
-transmit:
-	  // 4. transmit result
-	  if (!queue_is_empty(&to_user_queue)) {
-		  char response[256];
-		  const size_t length = queue_read(&to_user_queue, (uint8_t*) response, sizeof(response));
-		  HAL_UART_Transmit(&huart6, (uint8_t*) response, length, length * POLLING_RECEIVE_TIMEOUT_PER_CHAR);
-	  }
-
+	char response[256];
+	snprintf(response, 256, "%d\r\n", cur_event);
+	const size_t sz = strlen(response);
+	HAL_UART_Transmit(&huart6, (uint8_t*) response, sz, sz * 10);
   }
   /* USER CODE END 3 */
 }
@@ -280,13 +176,12 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-
-	if(htim->Instance == TIM6) {
-		update_counters();
-	}
-
-}
+//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+//
+//	if(htim->Instance == TIM6) {
+//	}
+//
+//}
 /* USER CODE END 4 */
 
 /**

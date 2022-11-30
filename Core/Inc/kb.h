@@ -11,13 +11,31 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define ROW1 0xFE
-#define ROW2 0xFD
-#define ROW3 0xFB
-#define ROW4 0xF7
+enum kb_fms {
+	KB_FMS_SELECT_ROW = 0,
+	KB_FMS_POLL_ROW
+};
 
 
-uint8_t check_row(uint8_t row_nr);
-HAL_StatusTypeDef set_keyboard(void);
+enum kb_event {
+	KBE_NONE       =  0,
+	KBE_PRESSED_1  =  1,
+	KBE_PRESSED_2  =  2,
+	KBE_PRESSED_3  =  3,
+	KBE_PRESSED_4  =  4,
+	KBE_PRESSED_5  =  5,
+	KBE_PRESSED_6  =  6,
+	KBE_PRESSED_7  =  7,
+	KBE_PRESSED_8  =  8,
+	KBE_PRESSED_9  =  9,
+	KBE_PRESSED_10 = 10,
+	KBE_PRESSED_11 = 11,
+	KBE_PRESSED_12 = 12
+};
+
+HAL_StatusTypeDef KB_Init();
+HAL_StatusTypeDef KB_Poll_Start();
+
+enum kb_event KB_Poll_Finish();
 
 #endif /* INC_KB_H_ */
