@@ -143,6 +143,8 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim6);
 
   bool is_test = true;
+  GPIO_PinState old_btn = GPIO_PIN_SET, cur_btn = GPIO_PIN_SET;
+  uint32_t old_btn_tm = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -153,6 +155,21 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	const uint32_t now_btn_tm = HAL_GetTick();
+	old_btn = cur_btn;
+	if (now_btn_tm - old_btn_tm > 300) {
+		cur_btn = HAL_GPIO_ReadPin(GPIOC, nBTN_Pin);
+		old_btn_tm = now_btn_tm;
+	}
+
+	if ((cur_btn == GPIO_PIN_RESET) && (old_btn == GPIO_PIN_SET)) {
+		is_test = !is_test;
+		char response[256];
+		snprintf(response, 256, is_test ? "test mode enabled\r\n" : "application mode enabled\r\n");
+		const size_t length = strlen(response);
+		HAL_UART_Transmit(&huart6, (uint8_t*) response, length, length * POLLING_RECEIVE_TIMEOUT_PER_CHAR);
+	}
+
 	KB_Poll_Start();
 	const uint32_t now_tm = HAL_GetTick();
 	old_event = cur_event;
