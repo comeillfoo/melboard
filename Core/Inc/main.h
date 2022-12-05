@@ -36,6 +36,19 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+enum request_type {
+ RQT_DO = 0,
+ RQT_RE,
+ RQT_MI,
+ RQT_FA,
+ RQT_SOL,
+ RQT_LA,
+ RQT_TI,
+ RQT_RAISE_OCTAVE,
+ RQT_LOWER_OCTAVE,
+ RQT_RAISE_DURATION,
+ RQT_LOWER_DURATION
+};
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

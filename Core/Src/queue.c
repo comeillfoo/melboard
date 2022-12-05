@@ -58,4 +58,5 @@ int queue_is_empty(struct fifo_queue* q) {
 
 void queue_clear(struct fifo_queue* q) {
 	q->counter = 0;
+	q->data_p = 0;
 }
